@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    JBoss, Home of Professional Open Source
+    Copyright 2014, Red Hat, Inc. and/or its affiliates, and individual
+    contributors by the @authors tag. See the copyright.txt in the
+    distribution for a full listing of individual contributors.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<!--
+   This is the OSGi Blueprint XML file defining the Camel context and routes.  Because the file is in the
+   OSGI-INF/blueprint directory inside our JAR, it will be automatically activated as soon as the bundle is installed.
+
+   The root element for any OSGi Blueprint file is 'blueprint' - you also see the namespace definitions for both the Blueprint
+   and the Camel namespaces.
+-->
+<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+    xmlns:cxf="http://camel.apache.org/schema/blueprint/cxf"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http:/camel.apache.org/schema/blueprint/cxf http://camel.apache.org/schema/blueprint/cxf/camel-cxf.xsd  http://www.osgi.org/xmlns/blueprint/v1.0.0 https://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd                            http://camel.apache.org/schema/blueprint http://camel.apache.org/schema/blueprint/camel-blueprint.xsd">
+    <bean class="cl.bicevida.processor.ExceptionProcessor" id="exPr"/>
+    <bean class="cl.bicevida.processor.PdfPlanillaProcessor" id="plPr"/>
+    <camelContext id="_contextBotonDePago" xmlns="http://camel.apache.org/schema/blueprint">
+        <propertyPlaceholder id="properties" location="classpath:/configurationbice.properties"/>
+        <onException>
+            <exception>java.lang.Exception</exception>
+            <handled>
+                <simple>true</simple>
+            </handled>
+            <process id="proEX" ref="exPr"/>
+            <marshal id="_marshal_Ex">
+                <json id="_json_Ex" library="Jackson"/>
+            </marshal>
+        </onException>
+        <restConfiguration component="restlet" port="{{middleware.botonpago.puerto}}"/>
+        <rest path="/bicevida/boton/pago/prima" produces="application/json">
+            <get uri="/services/ping">
+                <route>
+                    <log id="_logOK" message="PING OK [bv-boton-pago]"/>
+                </route>
+            </get>
+            <post outType="java.lang.String" produces="application/json" uri="/consultaDeuda/{rut}">
+                <to uri="direct:consultaDeuda"/>
+            </post>
+            <post outType="java.lang.String" produces="application/json"
+                type="cl.bicevida.object.PagoPublicoVO" uri="/confirmaProducto">
+                <to uri="direct:confirmaProducto"/>
+            </post>
+            <post outType="java.lang.String" produces="application/json"
+                type="cl.bicevida.object.PagoPublicoVO" uri="/confirmaMedioPago">
+                <to uri="direct:confirmaMedioPago"/>
+            </post>
+            <post outType="java.lang.String" produces="application/json"
+                type="cl.bicevida.object.PagoPublicoVO" uri="/verificaComprobante">
+                <to uri="direct:verificaComprobante"/>
+            </post>
+            <post outType="java.lang.String" produces="application/json"
+                type="cl.bicevida.object.InCorreo" uri="/enviaEmail">
+                <to uri="direct:enviaCorreo"/>
+            </post>
+            <get outType="java.lang.String" produces="application/json" uri="/pdfPlanilla/{rut}">
+                <to uri="direct:pdfPlanilla"/>
+            </get>
+        </rest>
+        
+        <!-- CONSULTA DEUDA -->
+        <route id="__routeConsultaDeuda">
+            <from id="_direct:consultaDeuda" uri="direct:consultaDeuda"/>
+            <log id="_log_consultaDeuda" message="Rut de consulta: ${header.rut}"/>
+            <setHeader headerName="Content-Type" id="_setHeaderContentType">
+                <simple>application/json</simple>
+            </setHeader>
+            <setHeader headerName="CamelHttpPath" id="_httpPath">
+                <simple>/WSBotonDePagoPrima/rest/prima/consultaDeuda</simple>
+            </setHeader>
+            <setHeader headerName="CamelHttpQuery" id="_httpQuery">
+                <simple>rut=${header.rut}</simple>
+            </setHeader>
+            <to id="callConsultaDeuda" uri="{{ohs.url}}/{{cluster.bp}}?bridgeEndpoint=true"/>
+            <convertBodyTo id="_convertBody_consultaDeuda" type="java.lang.String"/>
+            <log id="_log_salida_consultaDeuda" message="Salida de la Consulta deuda: ${body}"/>
+        </route>
+        <!-- FIN CONSULTA DEUDA -->
+        
+        <!-- CONFIRMACION PRODUCTO -->
+        <route id="__routeConfirmaProducto">
+            <from id="_direct:confirmaProducto" uri="direct:confirmaProducto"/>
+            <log id="_log_confirmaProducto" message="Entro a la confirmacion"/>
+            <setHeader headerName="Content-Type" id="_ContentTypeConfirmacion">
+                <simple>application/json</simple>
+            </setHeader>
+            <setHeader headerName="CamelHttpPath" id="_httpPathConfirmacion">
+                <simple>/WSBotonDePagoPrima/rest/prima/confirmacionProductos</simple>
+            </setHeader>
+            <to id="callConfirmacionProducto" uri="{{ohs.url}}/{{cluster.bp}}?bridgeEndpoint=true"/>
+            <convertBodyTo id="_convertBody_confirmacion" type="java.lang.String"/>
+            <log id="_log_salida_confirmacion" message="Salida de la Confirmacion del producto: ${body}"/>
+        </route>
+        <!-- FIN CONFIRMACION PRODUCTO -->
+        
+        <!-- CONFIRMACION MEDIO DE PAGO -->
+        <route id="__routeConfirmaMedioPago">
+            <from id="_direct:confirmaMedioPago" uri="direct:confirmaMedioPago"/>
+            <log id="_log_confirmaMedioPago" message="Entro a la confirmacion del medio de pago"/>
+            <setHeader headerName="Content-Type" id="_ContentTypeMedioPago">
+                <simple>application/json</simple>
+            </setHeader>
+            <setHeader headerName="CamelHttpPath" id="_httpPathMedioPago">
+                <simple>/WSBotonDePagoPrima/rest/prima/confirmacionMedioPago</simple>
+            </setHeader>
+            <to id="callConfirmacionMedioPago" uri="{{ohs.url}}/{{cluster.bp}}?bridgeEndpoint=true"/>
+            <convertBodyTo id="_convertBody_medioPago" type="java.lang.String"/>
+            <log id="_log_salida_medioPago" message="Salida de la Confirmacion del medio de pago: ${body}"/>
+        </route>
+        <!-- FIN CONFIRMACION MEDIO DE PAGO -->
+        
+        <!-- VERIFICA COMPROBANTE -->
+        <route id="__routeVerificaComprobante">
+            <from id="_direct:verificaComprobante" uri="direct:verificaComprobante"/>
+            <log id="_log_verificaComprobante" message="Entro a la verificacion del pago"/>
+            <setHeader headerName="Content-Type" id="_ContentTypeComprobante">
+                <simple>application/json</simple>
+            </setHeader>
+            <setHeader headerName="CamelHttpPath" id="_httpPathComprobante">
+                <simple>/WSBotonDePagoPrima/rest/prima/verificaComprobante</simple>
+            </setHeader>
+            <to id="callVerificacionComprobante" uri="{{ohs.url}}/{{cluster.bp}}?bridgeEndpoint=true"/>
+            <convertBodyTo id="_convertBody_comprobante" type="java.lang.String"/>
+            <log id="_log_salida_comprobante" message="Salida de la Verificacion del pago: ${body}"/>
+        </route>
+        <!-- FIN VERIFICACION COMPROBANTE -->
+        
+        <!-- ENVIA CORREO -->
+        <route id="__routeEnviaCorreo">
+            <from id="_direct:enviaCorreo" uri="direct:enviaCorreo"/>
+            <log id="_log_enviaCorreo" message="Entro al envio de correo"/>
+            <setHeader headerName="Content-Type" id="_ContentTypeCorreo">
+                <simple>application/json</simple>
+            </setHeader>
+            <setHeader headerName="CamelHttpPath" id="_httpPathCorreo">
+                <simple>/WSBotonDePagoPrima/rest/prima/enviarEmail</simple>
+            </setHeader>
+            <to id="callEnvioCorreo" uri="{{ohs.url}}/{{cluster.bp}}?bridgeEndpoint=true"/>
+            <convertBodyTo id="_convertBody_correo" type="java.lang.String"/>
+            <log id="_log_salida_correo" message="Salida del envio de correo: ${body}"/>
+        </route>
+        <!-- FIN ENVIA CORREO -->
+        
+        <!-- PLANILLA APV PDF -->
+        
+        <route id="_routePdfPlanilla">
+            <from id="_direct:pdfPlanilla" uri="direct:pdfPlanilla"/>
+            <log id="_log_pdfPlanilla" message="Entro a la consulta del pdf planilla APV"/>
+            <setHeader headerName="Content-Type" id="_contentTypePlanilla">
+                <simple>application/json</simple>
+            </setHeader>
+            <process id="plPro" ref="plPr"/>
+            <log id="_log_salida_process" message="Salida de la consulta del pdf"/>
+            <marshal id="_marshal_planillaPdf">
+                <json id="_json_planillaPdf" library="Jackson"/>
+            </marshal>
+            <log id="_log_salida_marshal" message="Salida Marshal planilla"/>
+        </route>
+        <!-- FIN PLANILLA APV PDF -->
+    </camelContext>
+</blueprint>
