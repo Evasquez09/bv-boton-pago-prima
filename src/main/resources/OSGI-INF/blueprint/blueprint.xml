@@ -39,39 +39,9 @@
                 <json id="_json_Ex" library="Jackson"/>
             </marshal>
         </onException>
-        <restConfiguration component="restlet" port="{{middleware.botonpago.puerto}}"/>
-        <rest path="/bicevida/boton/pago/prima" produces="application/json">
-            <get uri="/services/ping">
-                <route>
-                    <log id="_logOK" message="PING OK [bv-boton-pago]"/>
-                </route>
-            </get>
-            <post outType="java.lang.String" produces="application/json" uri="/consultaDeuda/{rut}">
-                <to uri="direct:consultaDeuda"/>
-            </post>
-            <post outType="java.lang.String" produces="application/json"
-                type="cl.bicevida.object.PagoPublicoVO" uri="/confirmaProducto">
-                <to uri="direct:confirmaProducto"/>
-            </post>
-            <post outType="java.lang.String" produces="application/json"
-                type="cl.bicevida.object.PagoPublicoVO" uri="/confirmaMedioPago">
-                <to uri="direct:confirmaMedioPago"/>
-            </post>
-            <post outType="java.lang.String" produces="application/json"
-                type="cl.bicevida.object.PagoPublicoVO" uri="/verificaComprobante">
-                <to uri="direct:verificaComprobante"/>
-            </post>
-            <post outType="java.lang.String" produces="application/json"
-                type="cl.bicevida.object.InCorreo" uri="/enviaEmail">
-                <to uri="direct:enviaCorreo"/>
-            </post>
-            <get outType="java.lang.String" produces="application/json" uri="/pdfPlanilla/{rut}">
-                <to uri="direct:pdfPlanilla"/>
-            </get>
-        </rest>
         <!-- CONSULTA DEUDA -->
         <route id="__routeConsultaDeuda">
-            <from id="_direct:consultaDeuda" uri="direct:consultaDeuda"/>
+            <from id="_direct-vm:consultaDeudaPrima" uri="direct-vm:consultaDeudaPrima"/>
             <log id="_log_consultaDeuda" message="Rut de consulta: ${header.rut}"/>
             <setHeader headerName="Content-Type" id="_setHeaderContentType">
                 <simple>application/json</simple>
@@ -89,7 +59,7 @@
         <!-- FIN CONSULTA DEUDA -->
         <!-- CONFIRMACION PRODUCTO -->
         <route id="__routeConfirmaProducto">
-            <from id="_direct:confirmaProducto" uri="direct:confirmaProducto"/>
+            <from id="_direct-vm:confirmaProductoPrima" uri="direct-vm:confirmaProductoPrima"/>
             <log id="_log_confirmaProducto" message="Entro a la confirmacion"/>
             <setHeader headerName="Content-Type" id="_ContentTypeConfirmacion">
                 <simple>application/json</simple>
@@ -104,7 +74,7 @@
         <!-- FIN CONFIRMACION PRODUCTO -->
         <!-- CONFIRMACION MEDIO DE PAGO -->
         <route id="__routeConfirmaMedioPago">
-            <from id="_direct:confirmaMedioPago" uri="direct:confirmaMedioPago"/>
+            <from id="_direct-vm:confirmaMedioPagoPrima" uri="direct-vm:confirmaMedioPagoPrima"/>
             <log id="_log_confirmaMedioPago" message="Entro a la confirmacion del medio de pago"/>
             <setHeader headerName="Content-Type" id="_ContentTypeMedioPago">
                 <simple>application/json</simple>
@@ -119,7 +89,7 @@
         <!-- FIN CONFIRMACION MEDIO DE PAGO -->
         <!-- VERIFICA COMPROBANTE -->
         <route id="__routeVerificaComprobante">
-            <from id="_direct:verificaComprobante" uri="direct:verificaComprobante"/>
+            <from id="_direct-vm:verificaComprobantePrima" uri="direct-vm:verificaComprobantePrima"/>
             <log id="_log_verificaComprobante" message="Entro a la verificacion del pago"/>
             <setHeader headerName="Content-Type" id="_ContentTypeComprobante">
                 <simple>application/json</simple>
@@ -134,7 +104,7 @@
         <!-- FIN VERIFICACION COMPROBANTE -->
         <!-- ENVIA CORREO -->
         <route id="__routeEnviaCorreo">
-            <from id="_direct:enviaCorreo" uri="direct:enviaCorreo"/>
+            <from id="_direct-vm:enviaCorreoPrima" uri="direct-vm:enviaCorreoPrima"/>
             <log id="_log_enviaCorreo" message="Entro al envio de correo"/>
             <setHeader headerName="Content-Type" id="_ContentTypeCorreo">
                 <simple>application/json</simple>
@@ -149,7 +119,7 @@
         <!-- FIN ENVIA CORREO -->
         <!-- PLANILLA APV PDF -->
         <route id="_routePdfPlanilla">
-            <from id="_direct:pdfPlanilla" uri="direct:pdfPlanilla"/>
+            <from id="_direct-vm:pdfPlanilla" uri="direct-vm:pdfPlanilla"/>
             <log id="_log_pdfPlanilla" message="Entro a la consulta del pdf planilla APV"/>
             <setHeader headerName="Content-Type" id="_contentTypePlanilla">
                 <simple>application/json</simple>
